@@ -28,15 +28,19 @@ import javax.net.ssl.X509TrustManager;
 
 @SuppressWarnings("TryFinallyCanBeTryWithResources")
 public class SimpleRestClient {
+  
+   public static final String JSON_CONTENT_TYPE = "application/json; charset=UTF-8";
 
   private static final String AUTH_HEADER = "Authorization";
-
+  
   private final int connectionTimeout;
   private final int readTimeout;
   private final boolean isUnsafe;
+  private final String referer;
+  private final String userAgent;
 
   public SimpleRestClient(){
-    this(30000, 30000, false);
+    this(30000, 30000, false, "", "");
   }
 
   /**
@@ -44,11 +48,15 @@ public class SimpleRestClient {
    * @param connectionTimeout
    * @param readTimeout
    * @param isUnsafe if true TLS (SSL) certificate verification is bypassed.
+   * @param referer
+   * @param userAgent
    */
-  public SimpleRestClient(int connectionTimeout, int readTimeout, boolean isUnsafe){
+  public SimpleRestClient(int connectionTimeout, int readTimeout, boolean isUnsafe, String referer, String userAgent){
     this.connectionTimeout = connectionTimeout;
     this.readTimeout = readTimeout;
     this.isUnsafe = isUnsafe;
+    this.referer = referer;
+    this.userAgent = userAgent;
   }
 
   /**
@@ -98,17 +106,18 @@ public class SimpleRestClient {
    * @param token  the session Cookie that identifies the current http session (if there is one,
    *               can be null if there is not)
    * @param object the data to be posted, can be null if there is no data to post.
+   * @return 
    * @throws IOException if there is a problem established or reading from the Http Connection.
    *                     maybe an HttpResponseException with more specific information about why the rest call failed.
    */
-  public void post(URL url, String token, Object object) throws IOException {
+  public String post(URL url, String token, Object object) throws IOException {
     Gson gson = new GsonBuilder().create();
     HttpURLConnection connection = getConnectionForPost(url, token);
     OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
     try {
       writeRequestBody(writer, gson, object);
       writer.flush();
-      String result = getResponseBody(connection, gson, String.class);
+      return getResponseBody(connection, gson, String.class);
     } finally {
       writer.close();
     }
@@ -187,46 +196,55 @@ public class SimpleRestClient {
     } catch (NoSuchAlgorithmException | KeyManagementException e) {
       throw new IOException("Problem with SSL connection set-up", e);
     }
-    connection.setConnectTimeout(connectionTimeout);
-    connection.setReadTimeout(readTimeout);
-    Map<String, String> defaultHeaders = getDefaultHeaders();
-    for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
-      connection.setRequestProperty(entry.getKey(), entry.getValue());
-    }
-    if (token != null) {
-      if (token.contains("OAuth")) {
-        connection.setRequestProperty(AUTH_HEADER, token);
-      } else {
-        connection.setRequestProperty(AUTH_HEADER, "Bearer " + token);
+    if (connection != null) {
+      connection.setConnectTimeout(connectionTimeout);
+      connection.setReadTimeout(readTimeout);
+      Map<String, String> defaultHeaders = getDefaultHeaders();
+      for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
+        connection.setRequestProperty(entry.getKey(), entry.getValue());
+      }
+      if (token != null) {
+        if (token.contains("OAuth")) {
+          connection.setRequestProperty(AUTH_HEADER, token);
+        } else {
+          connection.setRequestProperty(AUTH_HEADER, "Bearer " + token);
+        }
       }
     }
     return connection;
   }
 
+  /**
+   * @return Map of default headers with referer and userAgent set.
+   */
   private Map<String, String> getDefaultHeaders() {
     Map<String, String> headers = new HashMap<>();
-    headers.put("Accept", "application/json; charset=UTF-8");
-    headers.put("Content-Type", "application/json; charset=UTF-8");
-    headers.put("Referer", "https://broadbandunlimited.nz/");
-    headers.put("User-Agent", "Spark Ventures AOL");
+    headers.put("Accept", JSON_CONTENT_TYPE);
+    headers.put("Content-Type", JSON_CONTENT_TYPE);
+    headers.put("Referer", referer);
+    headers.put("User-Agent", userAgent);
     return headers;
   }
 
   private TrustManager[] trustAllCerts = new TrustManager[]{
       new X509TrustManager() {
+        @Override
         public X509Certificate[] getAcceptedIssuers() {
           return null;
         }
 
+        @Override
         public void checkClientTrusted(X509Certificate[] certs, String authType) {
         }
 
+        @Override
         public void checkServerTrusted(X509Certificate[] certs, String authType) {
         }
       }
   };
 
-  private HostnameVerifier allHostsValid = new HostnameVerifier() {
+  private final HostnameVerifier allHostsValid = new HostnameVerifier() {
+    @Override
     public boolean verify(String hostname, SSLSession session) {
       return true;
     }

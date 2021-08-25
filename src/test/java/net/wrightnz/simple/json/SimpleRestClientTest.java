@@ -13,7 +13,13 @@ class SimpleRestClientTest {
 
   @Test
   void construct() {
-    new SimpleRestClient(3000, 3000, false);
+    new SimpleRestClient(
+            3000, 
+            3000, 
+            false, 
+            "http://localhost:8080", 
+            "net.wrightnz.simple.simplejson"
+    );
   }
 
   @Test
