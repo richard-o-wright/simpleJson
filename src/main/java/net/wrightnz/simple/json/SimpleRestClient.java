@@ -29,7 +29,7 @@ import javax.net.ssl.X509TrustManager;
 @SuppressWarnings("TryFinallyCanBeTryWithResources")
 public class SimpleRestClient {
   
-   public static final String JSON_CONTENT_TYPE = "application/json; charset=UTF-8";
+  public static final String JSON_CONTENT_TYPE = "application/json; charset=UTF-8";
 
   private static final String AUTH_HEADER = "Authorization";
   
