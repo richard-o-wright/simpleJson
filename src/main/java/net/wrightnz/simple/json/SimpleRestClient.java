@@ -28,30 +28,31 @@ import javax.net.ssl.X509TrustManager;
 
 @SuppressWarnings("TryFinallyCanBeTryWithResources")
 public class SimpleRestClient {
-  
+
   public static final String JSON_CONTENT_TYPE = "application/json; charset=UTF-8";
 
   private static final String AUTH_HEADER = "Authorization";
-  
+
   private final int connectionTimeout;
   private final int readTimeout;
   private final boolean isUnsafe;
   private final String referer;
   private final String userAgent;
 
-  public SimpleRestClient(){
+  public SimpleRestClient() {
     this(30000, 30000, false, "", "");
   }
 
   /**
    * Create a new SimpleRestClient.
+   *
    * @param connectionTimeout
    * @param readTimeout
    * @param isUnsafe if true TLS (SSL) certificate verification is bypassed.
    * @param referer
    * @param userAgent
    */
-  public SimpleRestClient(int connectionTimeout, int readTimeout, boolean isUnsafe, String referer, String userAgent){
+  public SimpleRestClient(int connectionTimeout, int readTimeout, boolean isUnsafe, String referer, String userAgent) {
     this.connectionTimeout = connectionTimeout;
     this.readTimeout = readTimeout;
     this.isUnsafe = isUnsafe;
@@ -59,37 +60,64 @@ public class SimpleRestClient {
     this.userAgent = userAgent;
   }
 
-  /**
-   * @param url         the url to get.
-   * @param token       the session Cookie that identifies the current http session (if there is one,
-   *                    can be null if there is not)
-   * @param entityClass A class describing any response data
-   * @param <T>         the type of the entityClass
-   * @return an instance of the entityClass with any result sent back as a result of this post.
-   * @throws IOException if there is a problem established or reading from the Http Connection.
-   *                     maybe an HttpResponseException with more specific information about why the rest call failed.
-   */
   public <T> T get(URL url, String token, Class<T> entityClass) throws IOException {
-    Gson gson = new GsonBuilder().create();
-    HttpURLConnection connection = getConnectionForGet(url, token);
-    T result = getResponseBody(connection, gson, entityClass);
-    return result;
+    return get(url, null, token, entityClass);
   }
 
   /**
-   * @param url         the url to post to
-   * @param token       the session Cookie that identifies the current http session (if there is one,
-   *                    can be null if there is not)
-   * @param object      the data to be posted, can be null if there is no data to post.
+   * @param url the url to post to
+   * @param authHeader the value of the Authorization to send with this request.
+   * @param object the data to be posted, can be null if there is no data to
+   * post.
    * @param entityClass A class describing any response data
-   * @param <T>         the type of the entityClass
-   * @return an instance of the entityClass with any result sent back as a result of this post.
-   * @throws IOException if there is a problem established or reading from the Http Connection.
-   *                     maybe an HttpResponseException with more specific information about why the rest call failed.
+   * @param <T> the type of the entityClass
+   * @return an instance of the entityClass with any result sent back as a
+   * result of this post.
+   * @throws IOException if there is a problem established or reading from the
+   * Http Connection. maybe an HttpResponseException with more specific
+   * information about why the rest call failed.
    */
-  public <T> T post(URL url, String token, Object object, Class<T> entityClass) throws IOException {
+  public <T> T post(URL url, String authHeader, Object object, Class<T> entityClass) throws IOException {
+    return post(url, null, authHeader, object, entityClass);
+  }
+
+  /**
+   * @param url the url to get.
+   * @param customHeaders any addition http headers to include with the post,
+   * can be null.
+   * @param authHeader the value of the Authorization to send with this request.
+   * (if there is one, can be null if there is not)
+   * @param entityClass A class describing any response data
+   * @param <T> the type of the entityClass
+   * @return an instance of the entityClass with any result sent back as a
+   * result of this post.
+   * @throws IOException if there is a problem established or reading from the
+   * Http Connection. maybe an HttpResponseException with more specific
+   * information about why the rest call failed.
+   */
+  public <T> T get(URL url, Map<String, String> customHeaders, String authHeader, Class<T> entityClass) throws IOException {
     Gson gson = new GsonBuilder().create();
-    HttpURLConnection connection = getConnectionForPost(url, token);
+    HttpURLConnection connection = getConnectionForGet(url, authHeader, customHeaders);
+    T result = getResponseBody(connection, gson, entityClass);
+    return result;
+  }
+  
+  /**
+   *
+   * @param <T> the type of the entityClass
+   * @param url
+   * @param customHeaders any addition http headers to include with the post,
+   * can be null.
+   * @param authHeader the value of the Authorization to send with this request.
+   * (if there is one, can be null if there is not)
+   * @param object
+   * @param entityClass
+   * @return
+   * @throws IOException
+   */
+  public <T> T post(URL url, Map<String, String> customHeaders, String authHeader, Object object, Class<T> entityClass) throws IOException {
+    Gson gson = new GsonBuilder().create();
+    HttpURLConnection connection = getConnectionForPost(url, authHeader, customHeaders);
     OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
     try {
       writeRequestBody(writer, gson, object);
@@ -103,16 +131,16 @@ public class SimpleRestClient {
 
   /**
    * @param url    the url to post to
-   * @param token  the session Cookie that identifies the current http session (if there is one,
-   *               can be null if there is not)
+   * @param customHeaders any addition http headers to include with the post, can be null.
+   * @param authHeader
    * @param object the data to be posted, can be null if there is no data to post.
    * @return 
    * @throws IOException if there is a problem established or reading from the Http Connection.
    *                     maybe an HttpResponseException with more specific information about why the rest call failed.
    */
-  public String post(URL url, String token, Object object) throws IOException {
+  public String post(URL url, Map<String, String> customHeaders, String authHeader, Object object) throws IOException {
     Gson gson = new GsonBuilder().create();
-    HttpURLConnection connection = getConnectionForPost(url, token);
+    HttpURLConnection connection = getConnectionForPost(url, authHeader, customHeaders);
     OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
     try {
       writeRequestBody(writer, gson, object);
@@ -166,20 +194,20 @@ public class SimpleRestClient {
     return gson.fromJson(json, entityClass);
   }
 
-  private HttpURLConnection getConnectionForGet(final URL url, final String token) throws IOException {
-    HttpURLConnection connection = getConnection(url, token);
+  private HttpURLConnection getConnectionForGet(final URL url, final String token, Map<String, String> customHeaders) throws IOException {
+    HttpURLConnection connection = getConnection(url, token, customHeaders);
     connection.setRequestMethod("GET");
     return connection;
   }
 
-  private HttpURLConnection getConnectionForPost(final URL url, final String token) throws IOException {
-    HttpURLConnection connection = getConnection(url, token);
+  private HttpURLConnection getConnectionForPost(final URL url, final String authHeader, Map<String, String> customHeaders) throws IOException {
+    HttpURLConnection connection = getConnection(url, authHeader, customHeaders);
     connection.setRequestMethod("POST");
     connection.setDoOutput(true);
     return connection;
   }
 
-  private HttpURLConnection getConnection(final URL url, final String token) throws IOException {
+  private HttpURLConnection getConnection(final URL url, final String authHeader, final Map<String, String> customHeaders) throws IOException {
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     try {
       SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -200,14 +228,17 @@ public class SimpleRestClient {
       connection.setConnectTimeout(connectionTimeout);
       connection.setReadTimeout(readTimeout);
       Map<String, String> defaultHeaders = getDefaultHeaders();
+      if (customHeaders != null && !customHeaders.isEmpty()) {
+        defaultHeaders.putAll(customHeaders);
+      }
       for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
         connection.setRequestProperty(entry.getKey(), entry.getValue());
       }
-      if (token != null) {
-        if (token.contains("OAuth")) {
-          connection.setRequestProperty(AUTH_HEADER, token);
+      if (authHeader != null) {
+        if (authHeader.contains("OAuth") || authHeader.contains("Basic")) {
+          connection.setRequestProperty(AUTH_HEADER, authHeader);
         } else {
-          connection.setRequestProperty(AUTH_HEADER, "Bearer " + token);
+          connection.setRequestProperty(AUTH_HEADER, "Bearer " + authHeader);
         }
       }
     }
