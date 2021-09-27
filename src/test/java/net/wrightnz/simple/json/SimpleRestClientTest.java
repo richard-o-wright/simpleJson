@@ -8,18 +8,20 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Assertions;
 
 class SimpleRestClientTest {
 
   @Test
   void construct() {
-    new SimpleRestClient(
-            3000, 
-            3000, 
+    SimpleRestClient client = new SimpleRestClient(
+            30000, 
+            30000, 
             false, 
             "http://localhost:8080", 
             "net.wrightnz.simple.simplejson"
     );
+    Assertions.assertNotNull(client);
   }
 
   @Test

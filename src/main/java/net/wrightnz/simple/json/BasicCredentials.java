@@ -6,59 +6,17 @@ import java.util.Base64;
  *
  * @author Richard Wright
  */
-public class BasicCredentials {
-
-  private String username;
-  private String password;
+public class BasicCredentials extends AuthHeader {
 
   public BasicCredentials(String username, String password) {
-    this.username = username;
-    this.password = password;
+    super(AuthHeader.Type.Basic, asBasic(username, password));
   }
 
-  BasicCredentials() {
-    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-  }
-
-  /**
-   * @return the username
-   */
-  public String getUsername() {
-    return username;
-  }
-
-  /**
-   * @param username the username to set
-   */
-  public void setUsername(String username) {
-    this.username = username;
-  }
-
-  /**
-   * @return the password
-   */
-  public String getPassword() {
-    return password;
-  }
-
-  /**
-   * @param password the password to set
-   */
-  public void setPassword(String password) {
-    this.password = password;
-  }
-
-  public String asBasic() {
+  private static String asBasic(String username, String password) {
     StringBuilder sb = new StringBuilder();
     sb.append("Basic ");
-    byte[] credential = (username + ":" + password).getBytes();    
+    byte[] credential = (username + ":" + password).getBytes();
     sb.append(Base64.getEncoder().encodeToString(credential));
     return sb.toString();
   }
-
-  @Override
-  public String toString() {
-    return "BasicCredentials{username=" + username + ", password=" + password + '}';
-  }
-
 }
