@@ -18,6 +18,6 @@ How to add to your project as Maven dependency:
 <dependency>
 	<groupId>net.wrightnz.simple</groupId>
 	<artifactId>simplejson</artifactId>
-	<version>0.1.4</version>
+	<version>0.1.5</version>
 </dependency>
 ```

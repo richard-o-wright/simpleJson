@@ -13,10 +13,7 @@ public class BasicCredentials extends AuthHeader {
   }
 
   private static String asBasic(String username, String password) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("Basic ");
     byte[] credential = (username + ":" + password).getBytes();
-    sb.append(Base64.getEncoder().encodeToString(credential));
-    return sb.toString();
+    return Base64.getEncoder().encodeToString(credential);
   }
 }
